@@ -1,0 +1,21 @@
+DEVICE: 'cpu'
+NUM_WORKERS: 4
+RANDOM_SEED: 42
+
+DATA:
+  ROOT_DIR: './data'
+  IMAGE_DIR: 'images'
+  MASK_DIR: 'masks'
+  IMG_EXT: '.png'
+  BATCH_SIZE: 4
+  IMG_WIDTH: 256
+  IMG_HEIGHT: 256
+  CLASS_RGB: [0, 255]
+
+MODEL:
+  NAME: 'Unet'
+  ENCODER_NAME: 'resnet18'
+
+TRAIN:
+  MAX_EPOCH: 20
+  LR: 1e-4

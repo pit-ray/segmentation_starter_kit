@@ -27,6 +27,7 @@ def train():
 
     cfg = load_config(
         args.config,  override_opts=args.opts)
+
     trainer = Trainer(cfg)
     trainer.run(
         experiment_tag=args.exp_tag,
@@ -34,5 +35,4 @@ def train():
 
 
 if __name__ == '__main__':
-
     train()

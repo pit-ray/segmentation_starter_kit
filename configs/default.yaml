@@ -1,16 +1,17 @@
 DEVICE: 'cpu'
-NUM_WORKERS: 4
+NUM_WORKERS: 1
 RANDOM_SEED: 42
 
 DATA:
-  ROOT_DIR: './data'
+  TRAIN_ROOT_DIR: './data/toy_dataset/train'
+  VAL_ROOT_DIR: './data/toy_dataset/val'
   IMAGE_DIR: 'images'
   MASK_DIR: 'masks'
   IMG_EXT: '.png'
-  BATCH_SIZE: 4
-  IMG_WIDTH: 256
-  IMG_HEIGHT: 256
-  CLASS_RGB: [0, 255]
+  BATCH_SIZE: 2
+  IMG_WIDTH: 64
+  IMG_HEIGHT: 64
+  CLASS_VALUES: [0, 255]
 
 MODEL:
   NAME: 'Unet'

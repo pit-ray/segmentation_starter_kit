@@ -4,7 +4,7 @@ from torch import nn
 import segmentation_models_pytorch as smp
 
 
-class Model(nn.Module):
+class SegmentationModel(nn.Module):
     def __init__(
             self,
             model_name: str,
@@ -28,6 +28,10 @@ class Model(nn.Module):
             dtype=torch.float32).view(1, -1, 1, 1))
 
     def forward(self, x):
+        """
+        Return:
+            logits
+        """
         x = (x - self.mean) / self.std
         y = self.model(x)
         return y

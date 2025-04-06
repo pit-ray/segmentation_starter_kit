@@ -3,3 +3,4 @@ yacs
 matplotlib
 tqdm
 mlflow
+opencv-python

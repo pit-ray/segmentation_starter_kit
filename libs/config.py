@@ -1,12 +1,14 @@
 from yacs.config import CfgNode
 
+
 _C = CfgNode()
 _C.DEVICE = 'cuda:0'
 _C.NUM_WORKERS = 4
 _C.RANDOM_SEED = None
 
 _C.DATA = CfgNode()
-_C.DATA.ROOT_DIR = './data'
+_C.DATA.TRAIN_ROOT_DIR = './data/toy_dataset/train'
+_C.DATA.VAL_ROOT_DIR = './data/toy_dataset/val'
 _C.DATA.IMAGE_DIR = 'images'
 _C.DATA.MASK_DIR = 'masks'
 _C.DATA.IMG_EXT = '.png'
@@ -14,7 +16,7 @@ _C.DATA.IMG_EXT = '.png'
 _C.DATA.BATCH_SIZE = 4
 _C.DATA.IMG_WIDTH = 256
 _C.DATA.IMG_HEIGHT = 256
-_C.DATA.CLASS_RGB = [0, 255]
+_C.DATA.CLASS_VALUES = [0, 255]
 
 _C.MODEL = CfgNode()
 _C.MODEL.NAME = 'Unet'
@@ -24,8 +26,12 @@ _C.TRAIN = CfgNode()
 _C.TRAIN.MAX_EPOCH = 20
 _C.TRAIN.LR = 1e-4
 
+_C.LOSS = CfgNode()
+_C.LOSS.CE_FACTOR = 1.0
+_C.LOSS.DICE_FACTOR = 1.0
 
-def get_cfg_defaults():
+
+def get_cfg_defaults() -> CfgNode:
     return _C.clone()
 
 

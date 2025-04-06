@@ -37,3 +37,40 @@ def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
+
+
+def load_weights(model, load_state_dict, auto_slice: bool = True):
+    state_dict = {}
+    # convert data_parallal to model
+    for k in load_state_dict:
+        if k.startswith('module') and not k.startswith('module_list'):
+            state_dict[k[7:]] = load_state_dict[k]
+        else:
+            state_dict[k] = load_state_dict[k]
+
+    model_state_dict = model.state_dict()
+
+    # check loaded parameters and created model parameters
+    for k in model_state_dict.keys():
+        if k in state_dict:
+            load_shape = state_dict[k].shape
+            model_shape = model_state_dict[k].shape
+            if load_shape != model_shape:
+                if auto_slice and load_shape[1:] == model_shape[1:]:
+                    # If the shape is just different the output size (of conv),
+                    # slice the weights so that the weight matches the model.
+                    print(
+                        'The shape {} is automatically changed '.format(k)
+                        + 'from {} to {}.'.format(
+                            str(load_shape), str(model_shape)))
+                    state_dict[k] = state_dict[k][:model_shape[0]]
+                else:
+                    print('Different shape {}.'.format(k))
+                    state_dict[k] = model_state_dict[k]
+        else:
+            print('Loaded state_dict does not have {}.'.format(k))
+            state_dict[k] = model_state_dict[k]
+
+    model.load_state_dict(state_dict, strict=False)
+    # print('Model Loaded: ', filename)
+    return model

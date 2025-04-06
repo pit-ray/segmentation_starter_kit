@@ -16,9 +16,9 @@ class SegmentationLoss(nn.Module):
             self.dice = smp.losses.DiceLoss(
                 smp.losses.BINARY_MODE, from_logits=True)
         else:
-            self.ce = smp.losses.SoftCrossEntropyLoss()
+            self.ce = smp.losses.SoftCrossEntropyLoss(smooth_factor=0.0)
             self.dice = smp.losses.DiceLoss(
-                smp.losses.MULTILABEL_MODE, from_logits=True)
+                smp.losses.MULTICLASS_MODE, from_logits=True)
 
         self.ce_factor = ce_factor
         self.dice_factor = dice_factor

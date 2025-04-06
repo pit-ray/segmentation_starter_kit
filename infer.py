@@ -76,6 +76,10 @@ def infer():
             pred_mask = logit.softmax(dim=1).argmax(dim=1)[0]
         pred_mask = pred_mask.detach().cpu().numpy()
 
+        pred_color_mask = np.zeros_like(pred_mask, dtype=np.uint16)
+        for i, value in enumerate(cfg.DATA.CLASS_VALUES):
+            pred_color_mask[pred_mask == i] = value
+
         fig = plt.figure(figsize=(12, 5), tight_layout=True, dpi=100)
         if height >= width:
             row = 1
@@ -93,7 +97,12 @@ def infer():
         ax2 = fig.add_subplot(row, col, 2)
         ax2.set_axis_off()
         ax2.set_title('Prediction')
-        ax2.imshow(pred_mask)
+        ax2.imshow(
+            pred_color_mask,
+            vmin=0,
+            vmax=max(cfg.DATA.CLASS_VALUES),
+            interpolation='none',
+            cmap='tab10')
 
         out_filename = os.path.join(
             args.output_dir, os.path.basename(filename))

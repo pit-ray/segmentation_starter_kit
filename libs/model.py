@@ -16,7 +16,7 @@ class SegmentationModel(nn.Module):
             encoder_name=encoder_name,
             encoder_weights='imagenet',
             in_channels=3,
-            classes=1)
+            classes=classes)
 
         preprocess_params = smp.encoders.get_preprocessing_params(
             encoder_name, pretrained='imagenet')

@@ -4,7 +4,10 @@ import numpy as np
 import cv2
 
 
-def generate_toy_dataset(num_trains: int, num_vals: int):
+def generate_toy_dataset(
+        num_trains: int,
+        num_vals: int,
+        multi: bool = False):
     for phase, num in [('train', num_trains), ('val', num_vals)]:
         image_dir = os.path.join('toy_dataset', phase, 'images')
         mask_dir = os.path.join('toy_dataset', phase, 'masks')
@@ -23,7 +26,8 @@ def generate_toy_dataset(num_trains: int, num_vals: int):
                 radius = np.random.randint(30, 70)
                 color = tuple(np.random.randint(0, 255, size=3).tolist())
                 cv2.circle(img, center, radius, color, -1)
-                cv2.circle(mask, center, radius, 255, -1)
+                cv2.circle(
+                    mask, center, radius, 127 if multi else 255, -1)
             else:
                 pt1 = (
                     np.random.randint(50, 150),
@@ -42,4 +46,4 @@ def generate_toy_dataset(num_trains: int, num_vals: int):
 
 
 if __name__ == '__main__':
-    generate_toy_dataset(100, 10)
+    generate_toy_dataset(100, 10, multi=True)

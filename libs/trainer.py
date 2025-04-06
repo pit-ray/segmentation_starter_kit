@@ -74,7 +74,7 @@ class Trainer(object):
             'val': data.DataLoader(
                 datasets['val'],
                 batch_size=1,
-                shuffle=False,
+                shuffle=True,
                 pin_memory=True,
                 drop_last=False,
                 num_workers=cfg.NUM_WORKERS,
@@ -166,7 +166,7 @@ class Trainer(object):
             mlflow.log_metric('train/' + key, val, iteration)
 
         with self._save_figure(inputs, outputs) as fig:
-            mlflow.log_figure(fig, 'train/{:05}.jpg'.format(epoch))
+            mlflow.log_figure(fig, 'train/{:05}.png'.format(epoch))
 
     def val(self, epoch):
         self.model.eval()
@@ -190,12 +190,14 @@ class Trainer(object):
                 logit = outputs['logit']
                 if self.binary_mode:
                     pred_mask = logit.sigmoid() > 0.5
+                    target_mask = inputs['mask']
                     metric_mode = 'binary'
                 else:
                     pred_mask = logit.softmax(dim=1).argmax(dim=1)
+                    target_mask = inputs['mask'][:, 0]
                     metric_mode = 'multiclass'
                 stats = smp.metrics.get_stats(
-                        pred_mask, inputs['mask'],
+                        pred_mask, target_mask,
                         mode=metric_mode, num_classes=self.class_num)
                 iou_score = smp.metrics.iou_score(
                     *stats, reduction='macro-imagewise')
@@ -208,7 +210,7 @@ class Trainer(object):
             mlflow.log_metric('val/' + key, val, iteration)
 
         with self._save_figure(inputs, outputs) as fig:
-            mlflow.log_figure(fig, 'val/{:05}.jpg'.format(epoch))
+            mlflow.log_figure(fig, 'val/{:05}.png'.format(epoch))
 
     def process_batch(self, inputs: dict) -> tuple:
         outputs: dict = {}
@@ -250,6 +252,12 @@ class Trainer(object):
 
         target_mask = inputs['mask'][0, 0].detach().cpu().numpy()
 
+        pred_color_mask = np.zeros_like(pred_mask, dtype=np.uint16)
+        target_color_mask = np.zeros_like(target_mask, dtype=np.uint16)
+        for i, value in enumerate(self.cfg.DATA.CLASS_VALUES):
+            pred_color_mask[pred_mask == i] = value
+            target_color_mask[target_mask == i] = value
+
         fig = plt.figure(figsize=(12, 5), tight_layout=True, dpi=100)
 
         if height >= width:
@@ -267,12 +275,22 @@ class Trainer(object):
         ax2 = fig.add_subplot(row, col, 2)
         ax2.set_axis_off()
         ax2.set_title('Prediction')
-        ax2.imshow(pred_mask)
+        ax2.imshow(
+            pred_color_mask,
+            vmin=0,
+            vmax=max(self.cfg.DATA.CLASS_VALUES),
+            interpolation='none',
+            cmap='tab10')
 
         ax3 = fig.add_subplot(row, col, 3)
         ax3.set_axis_off()
         ax3.set_title('Ground Truth')
-        ax3.imshow(target_mask)
+        ax3.imshow(
+            target_color_mask,
+            vmin=0,
+            vmax=max(self.cfg.DATA.CLASS_VALUES),
+            interpolation='none',
+            cmap='tab10')
 
         try:
             yield fig

@@ -39,7 +39,11 @@ class SegmentationDataset(data.Dataset):
 
         # Define data transforms
         self.to_tensor = transforms.ToTensor()
-        self.resize = transforms.Resize(size=(self.height, self.width))
+        self.resize_img = transforms.Resize(size=(self.height, self.width))
+        self.resize_mask = transforms.Resize(
+            size=(self.height, self.width),
+            interpolation=transforms.InterpolationMode.NEAREST,
+            antialias=False)
         self.color_jit = transforms.ColorJitter(
             brightness=(0.8, 1.2),
             contrast=(0.8, 1.2),
@@ -99,8 +103,8 @@ class SegmentationDataset(data.Dataset):
             mask[mask_values == value] = class_id
 
         # Resize these images
-        img = self.resize(img)
-        mask = self.resize(mask)
+        img = self.resize_img(img)
+        mask = self.resize_mask(mask)
 
         if self.random_colorjit and random.random() < 0.5:
             img = self.color_jit(img)

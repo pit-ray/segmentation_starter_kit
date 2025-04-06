@@ -37,51 +37,48 @@ class Trainer(object):
         self.model = self._init_model(cfg)
         self.loss_fn = self._init_loss(cfg)
         self.optim, self.scheduler = self._init_optimizer(cfg)
-
-        self.max_epoch = cfg.TRAIN.MAX_EPOCH
-        self.device = cfg.DEVICE
         self.cfg = cfg
 
     def _init_dataloaders(self, cfg):
         datasets = {
             'train': SegmentationDataset(
-                        cfg.DATA.TRAIN_ROOT_DIR,
-                        size_hw=(cfg.DATA.IMG_HEIGHT, cfg.DATA.IMG_WIDTH),
-                        class_values=cfg.DATA.CLASS_VALUES,
-                        image_dir_name=cfg.DATA.IMAGE_DIR,
-                        mask_dir_name=cfg.DATA.MASK_DIR,
-                        img_ext=cfg.DATA.IMG_EXT,
-                        is_train=True,
-                        random_hflip=True,
-                        random_vflip=True,
-                        random_colorjit=True,
-                        random_crop=False),
+                cfg.DATA.TRAIN_ROOT_DIR,
+                size_hw=(cfg.DATA.IMG_HEIGHT, cfg.DATA.IMG_WIDTH),
+                class_values=cfg.DATA.CLASS_VALUES,
+                image_dir_name=cfg.DATA.IMAGE_DIR,
+                mask_dir_name=cfg.DATA.MASK_DIR,
+                img_ext=cfg.DATA.IMG_EXT,
+                is_train=True,
+                random_hflip=True,
+                random_vflip=True,
+                random_colorjit=True,
+                random_crop=False),
             'val': SegmentationDataset(
-                        cfg.DATA.VAL_ROOT_DIR,
-                        size_hw=(cfg.DATA.IMG_HEIGHT, cfg.DATA.IMG_WIDTH),
-                        class_values=cfg.DATA.CLASS_VALUES,
-                        image_dir_name=cfg.DATA.IMAGE_DIR,
-                        mask_dir_name=cfg.DATA.MASK_DIR,
-                        img_ext=cfg.DATA.IMG_EXT,
-                        is_train=False)
+                cfg.DATA.VAL_ROOT_DIR,
+                size_hw=(cfg.DATA.IMG_HEIGHT, cfg.DATA.IMG_WIDTH),
+                class_values=cfg.DATA.CLASS_VALUES,
+                image_dir_name=cfg.DATA.IMAGE_DIR,
+                mask_dir_name=cfg.DATA.MASK_DIR,
+                img_ext=cfg.DATA.IMG_EXT,
+                is_train=False)
         }
         dataloaders = {
             'train': data.DataLoader(
-                        datasets['train'],
-                        batch_size=cfg.DATA.BATCH_SIZE,
-                        shuffle=True,
-                        pin_memory=True,
-                        drop_last=True,
-                        num_workers=cfg.NUM_WORKERS,
-                        worker_init_fn=seed_worker),
+                datasets['train'],
+                batch_size=cfg.DATA.BATCH_SIZE,
+                shuffle=True,
+                pin_memory=True,
+                drop_last=True,
+                num_workers=cfg.NUM_WORKERS,
+                worker_init_fn=seed_worker),
             'val': data.DataLoader(
-                        datasets['val'],
-                        batch_size=1,
-                        shuffle=False,
-                        pin_memory=True,
-                        drop_last=False,
-                        num_workers=cfg.NUM_WORKERS,
-                        worker_init_fn=seed_worker)
+                datasets['val'],
+                batch_size=1,
+                shuffle=False,
+                pin_memory=True,
+                drop_last=False,
+                num_workers=cfg.NUM_WORKERS,
+                worker_init_fn=seed_worker)
         }
         return dataloaders
 
@@ -120,7 +117,7 @@ class Trainer(object):
         with mlflow.start_run(run_name=run_name) as _:
             self._log_params(self.cfg)
 
-            for epoch in range(self.max_epoch):
+            for epoch in range(self.cfg.TRAIN.MAX_EPOCH):
                 self.train(epoch)
                 self.val(epoch)
 
@@ -141,7 +138,7 @@ class Trainer(object):
 
         with tqdm(
                 self.dataloaders['train'],
-                desc='Train {}/{}'.format(epoch + 1, self.max_epoch),
+                desc='Train {}/{}'.format(epoch + 1, self.cfg.TRAIN.MAX_EPOCH),
                 leave=False,
                 dynamic_ncols=True) as pbar:
             for i, inputs in enumerate(pbar):
@@ -179,7 +176,7 @@ class Trainer(object):
         iteration = len(self.dataloaders['train']) * (epoch + 1)
         with tqdm(
                 self.dataloaders['val'],
-                desc='Val {}/{}'.format(epoch + 1, self.max_epoch),
+                desc='Val {}/{}'.format(epoch + 1, self.cfg.TRAIN.MAX_EPOCH),
                 leave=False,
                 dynamic_ncols=True) as pbar:
             for i, inputs in enumerate(pbar):
@@ -190,20 +187,19 @@ class Trainer(object):
                     if isinstance(lval, torch.Tensor):
                         val_losses[lkey] = float(lval.mean().detach().item())
 
-                    logit = outputs['logit']
-                    if self.binary_mode:
-                        pred_mask = logit.sigmoid() > 0.5
-                        metric_mode = 'binary'
-                    else:
-                        pred_mask = logit.softmax(dim=1).argmax(dim=1)
-                        metric_mode = 'multiclass'
-                    target_mask = inputs['mask']
-                    tp, fp, fn, tn = smp.metrics.get_stats(
-                            pred_mask, target_mask,
-                            mode=metric_mode, num_classes=self.class_num)
-                    iou_score = smp.metrics.iou_score(
-                        tp, fp, fn, tn, reduction="micro")
-                    iou_scores.append(iou_score)
+                logit = outputs['logit']
+                if self.binary_mode:
+                    pred_mask = logit.sigmoid() > 0.5
+                    metric_mode = 'binary'
+                else:
+                    pred_mask = logit.softmax(dim=1).argmax(dim=1)
+                    metric_mode = 'multiclass'
+                stats = smp.metrics.get_stats(
+                        pred_mask, inputs['mask'],
+                        mode=metric_mode, num_classes=self.class_num)
+                iou_score = smp.metrics.iou_score(
+                    *stats, reduction='macro-imagewise')
+                iou_scores.append(iou_score)
 
         mlflow.log_metric(
             'val/iou_score', np.array(iou_score).mean(), iteration)
@@ -228,7 +224,7 @@ class Trainer(object):
         return outputs, losses
 
     def to_device(self, x: torch.Tensor) -> torch.Tensor:
-        return x.to(self.device, non_blocking=True)
+        return x.to(self.cfg.DEVICE, non_blocking=True)
 
     def _log_params(self, cfg, parent_key: str = ''):
         for key, val in cfg.items():
